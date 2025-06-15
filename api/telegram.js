@@ -39,6 +39,15 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true });
   }
 
+  if (text === '/top_mover') {
+  const moverRes = await fetch(`${process.env.BASE_URL}/api/top_mover`);
+  const data = await moverRes.json();
+  if (!data.success) {
+    await sendMessage(chatId, '❌ Failed to fetch top movers');
+  }
+  return res.status(200).end();
+  }
+
   // fallback
   return res.status(200).json({ success: true, message: 'No command handled' });
 }
