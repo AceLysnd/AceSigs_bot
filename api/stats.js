@@ -1,4 +1,4 @@
-import { getStats } from '@/lib/stats';
+import { getStats } from '../lib/stats.js';
 
 export default function handler(req, res) {
   const range = req.query.range || 'daily'; // daily, weekly, monthly
