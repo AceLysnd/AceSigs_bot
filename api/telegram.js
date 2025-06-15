@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 ▫️ Monthly: ${stats.monthly ?? 0}
 `.trim();
 
-    const url = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`;
+    const url = `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`;
     const telegramRes = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
