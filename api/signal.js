@@ -6,8 +6,7 @@ export default async function handler(req, res) {
   const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
   const exchange = new ccxt.kucoin();
 
-  // Customizable
-  const PAIRS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT'];
+  const PAIRS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'];
   const signals = [];
 
   try {
@@ -15,16 +14,29 @@ export default async function handler(req, res) {
       try {
         const candles = await exchange.fetchOHLCV(symbol, '5m', undefined, 100);
         const closes = candles.map(c => c[4]);
+
         const rsi = calculateRSI(closes, 14);
+        const ema = calculateEMA(closes, 50);
+        const price = closes[closes.length - 1];
+
         const rsiPrev = rsi[rsi.length - 2];
         const rsiCurr = rsi[rsi.length - 1];
+        const emaCurr = ema[ema.length - 1];
 
         let message = null;
 
-        if (rsiPrev < 30 && rsiCurr > 30) {
-          message = `🟢 RSI BUY on ${symbol} (RSI: ${rsiCurr.toFixed(2)})`;
-        } else if (rsiPrev > 70 && rsiCurr < 70) {
-          message = `🔴 RSI SELL on ${symbol} (RSI: ${rsiCurr.toFixed(2)})`;
+        const atr = calculateATR(candles, 14);
+        const atrCurr = atr[atr.length - 1];
+
+        if (rsiPrev < 30 && rsiCurr > 30 && price > emaCurr) {
+            const sl = price - atrCurr;
+            const tp = price + (1.5 * (price - sl));
+            message = `🟢 BUY Signal on ${symbol}\nEntry: ${price.toFixed(4)}\nSL: ${sl.toFixed(4)}\nTP: ${tp.toFixed(4)}\nRR: 1.5\nRSI: ${rsiCurr.toFixed(2)}\nEMA(50): ${emaCurr.toFixed(2)}`;
+        }
+        else if (rsiPrev > 70 && rsiCurr < 70 && price < emaCurr) {
+            const sl = price + atrCurr;
+            const tp = price - (1.5 * (sl - price));
+            message = `🔴 SELL Signal on ${symbol}\nEntry: ${price.toFixed(4)}\nSL: ${sl.toFixed(4)}\nTP: ${tp.toFixed(4)}\nRR: 1.5\nRSI: ${rsiCurr.toFixed(2)}\nEMA(50): ${emaCurr.toFixed(2)}`;
         }
 
         if (message) {
@@ -47,21 +59,15 @@ export default async function handler(req, res) {
   }
 }
 
-// RSI function
+// Utilities
+
 function calculateRSI(prices, period = 14) {
-  const deltas = [];
-  for (let i = 1; i < prices.length; i++) {
-    deltas.push(prices[i] - prices[i - 1]);
-  }
-
-  let gains = [];
-  let losses = [];
+  const deltas = prices.slice(1).map((v, i) => v - prices[i]);
+  let gains = [], losses = [];
   for (let i = 0; i < deltas.length; i++) {
-    const delta = deltas[i];
-    gains.push(delta > 0 ? delta : 0);
-    losses.push(delta < 0 ? -delta : 0);
+    gains.push(Math.max(0, deltas[i]));
+    losses.push(Math.max(0, -deltas[i]));
   }
-
   let avgGain = avg(gains.slice(0, period));
   let avgLoss = avg(losses.slice(0, period));
   const rsi = [];
@@ -74,6 +80,37 @@ function calculateRSI(prices, period = 14) {
   }
 
   return new Array(period).fill(null).concat(rsi);
+}
+
+function calculateEMA(prices, period = 50) {
+  const k = 2 / (period + 1);
+  const ema = [avg(prices.slice(0, period))];
+  for (let i = period; i < prices.length; i++) {
+    ema.push(prices[i] * k + ema[ema.length - 1] * (1 - k));
+  }
+  return new Array(period - 1).fill(null).concat(ema);
+}
+
+function calculateATR(candles, period = 14) {
+  const trs = [];
+  for (let i = 1; i < candles.length; i++) {
+    const [ , high, low, , close ] = candles[i];
+    const [ , prevHigh, prevLow, , prevClose ] = candles[i - 1];
+    const tr = Math.max(
+      high - low,
+      Math.abs(high - prevClose),
+      Math.abs(low - prevClose)
+    );
+    trs.push(tr);
+  }
+  const atrs = [];
+  let atr = avg(trs.slice(0, period));
+  atrs.push(atr);
+  for (let i = period; i < trs.length; i++) {
+    atr = (atr * (period - 1) + trs[i]) / period;
+    atrs.push(atr);
+  }
+  return new Array(period).fill(null).concat(atrs);
 }
 
 function avg(arr) {
