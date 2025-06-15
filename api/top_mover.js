@@ -5,10 +5,11 @@ export default async function handler(req, res) {
   const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
   try {
-    const response = await axios.get('https://api.kucoin.com/api/v1/market/stats');
-    const stats = Object.values(response.data.data);
+    // ✅ Use the correct KuCoin endpoint for all market data
+    const response = await axios.get('https://api.kucoin.com/api/v1/market/allTickers');
+    const tickers = response.data.data.ticker;
 
-    const sorted = stats
+    const sorted = tickers
       .filter(s => s.symbol.endsWith('-USDT'))
       .sort((a, b) => Math.abs(parseFloat(b.changeRate)) - Math.abs(parseFloat(a.changeRate)))
       .slice(0, 5);
