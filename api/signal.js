@@ -6,7 +6,24 @@ export default async function handler(req, res) {
   const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
   const exchange = new ccxt.kucoin();
 
-  const PAIRS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'];
+const PAIRS = [
+  'BTC/USDT',
+  'ETH/USDT',
+  'BNB/USDT',
+  'SOL/USDT',
+  'XRP/USDT',
+  'ADA/USDT',
+  'DOGE/USDT',
+  'AVAX/USDT',
+  'DOT/USDT',
+  'SHIB/USDT',
+  'MATIC/USDT',
+  'LTC/USDT',
+  'TRX/USDT',
+  'LINK/USDT',
+  'ATOM/USDT'
+];
+
   const signals = [];
 
   try {
