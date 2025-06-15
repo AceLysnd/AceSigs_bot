@@ -4,10 +4,10 @@ import axios from 'axios';
 export default async function handler(req, res) {
   const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
   const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-  const SYMBOL = 'BTC/USDT';
+  const SYMBOL = 'BTC/USDT:USDT';
 
   try {
-    const exchange = new ccxt.binance();
+    const exchange = new ccxt.bybit();
     const candles = await exchange.fetchOHLCV(SYMBOL, '5m', undefined, 100);
     const closes = candles.map(c => c[4]); // closing prices
 
