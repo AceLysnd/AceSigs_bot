@@ -1,0 +1,7 @@
+{
+  "type": "module",
+  "dependencies": {
+    "ccxt": "^4.1.89",
+    "axios": "^1.6.7"
+  }
+}
