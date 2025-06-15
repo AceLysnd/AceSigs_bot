@@ -13,17 +13,17 @@ export default async function handler(req, res) {
     const message = `
 📊 *Trading Stats Summary*
 ———————————————
-📈 *Total Trades:* ${stats.totalTrades}
-✅ *Wins:* ${stats.wins}
-❌ *Losses:* ${stats.losses}
-🏆 *Win Rate:* ${stats.winRate}%
-💰 *Profit:* $${stats.profit.toFixed(2)}
+📈 *Total Trades:* ${stats.totalTrades ?? 0}
+✅ *Wins:* ${stats.wins ?? 0}
+❌ *Losses:* ${stats.losses ?? 0}
+🏆 *Win Rate:* ${(stats.winRate ?? 0).toFixed(2)}%
+💰 *Profit:* $${(stats.profit ?? 0).toFixed(2)}
 
 📅 *This Period*
-▫️ Daily: ${stats.daily}
-▫️ Weekly: ${stats.weekly}
-▫️ Monthly: ${stats.monthly}
-    `.trim();
+▫️ Daily: ${stats.daily ?? 0}
+▫️ Weekly: ${stats.weekly ?? 0}
+▫️ Monthly: ${stats.monthly ?? 0}
+`.trim();
 
     const url = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`;
     const telegramRes = await fetch(url, {
