@@ -12,11 +12,11 @@ export default async function handler(req, res) {
   try {
     for (const symbol of PAIRS) {
       try {
-        const candles = await exchange.fetchOHLCV(symbol, '5m', undefined, 100);
+        const candles = await exchange.fetchOHLCV(symbol, '1m', undefined, 100);
         const closes = candles.map(c => c[4]);
 
-        const rsi = calculateRSI(closes, 14);
-        const ema = calculateEMA(closes, 50);
+        const rsi = calculateRSI(closes, 7); // shorter RSI for faster reaction
+        const ema = calculateEMA(closes, 21); // shorter EMA for quicker trend catch
         const price = closes[closes.length - 1];
 
         const rsiPrev = rsi[rsi.length - 2];
@@ -25,18 +25,19 @@ export default async function handler(req, res) {
 
         let message = null;
 
-        const atr = calculateATR(candles, 14);
+        const atr = calculateATR(candles, 10); // faster ATR calculation
         const atrCurr = atr[atr.length - 1];
+        const minSL = 0.1; // minimum stop loss in case ATR is too small
 
         if (rsiPrev < 30 && rsiCurr > 30 && price > emaCurr) {
-            const sl = price - atrCurr;
+            const sl = Math.max(price - atrCurr, price - minSL);
             const tp = price + (1.5 * (price - sl));
-            message = `🟢 BUY Signal on ${symbol}\nEntry: ${price.toFixed(4)}\nSL: ${sl.toFixed(4)}\nTP: ${tp.toFixed(4)}\nRR: 1.5\nRSI: ${rsiCurr.toFixed(2)}\nEMA(50): ${emaCurr.toFixed(2)}`;
+            message = `🟢 BUY Signal on ${symbol}\nEntry: ${price.toFixed(4)}\nSL: ${sl.toFixed(4)}\nTP: ${tp.toFixed(4)}\nRR: 1.5\nRSI: ${rsiCurr.toFixed(2)}\nEMA(21): ${emaCurr.toFixed(2)}`;
         }
         else if (rsiPrev > 70 && rsiCurr < 70 && price < emaCurr) {
-            const sl = price + atrCurr;
+            const sl = Math.min(price + atrCurr, price + minSL);
             const tp = price - (1.5 * (sl - price));
-            message = `🔴 SELL Signal on ${symbol}\nEntry: ${price.toFixed(4)}\nSL: ${sl.toFixed(4)}\nTP: ${tp.toFixed(4)}\nRR: 1.5\nRSI: ${rsiCurr.toFixed(2)}\nEMA(50): ${emaCurr.toFixed(2)}`;
+            message = `🔴 SELL Signal on ${symbol}\nEntry: ${price.toFixed(4)}\nSL: ${sl.toFixed(4)}\nTP: ${tp.toFixed(4)}\nRR: 1.5\nRSI: ${rsiCurr.toFixed(2)}\nEMA(21): ${emaCurr.toFixed(2)}`;
         }
 
         if (message) {
@@ -61,7 +62,7 @@ export default async function handler(req, res) {
 
 // Utilities
 
-function calculateRSI(prices, period = 14) {
+function calculateRSI(prices, period = 7) {
   const deltas = prices.slice(1).map((v, i) => v - prices[i]);
   let gains = [], losses = [];
   for (let i = 0; i < deltas.length; i++) {
@@ -82,7 +83,7 @@ function calculateRSI(prices, period = 14) {
   return new Array(period).fill(null).concat(rsi);
 }
 
-function calculateEMA(prices, period = 50) {
+function calculateEMA(prices, period = 21) {
   const k = 2 / (period + 1);
   const ema = [avg(prices.slice(0, period))];
   for (let i = period; i < prices.length; i++) {
@@ -91,11 +92,11 @@ function calculateEMA(prices, period = 50) {
   return new Array(period - 1).fill(null).concat(ema);
 }
 
-function calculateATR(candles, period = 14) {
+function calculateATR(candles, period = 10) {
   const trs = [];
   for (let i = 1; i < candles.length; i++) {
     const [ , high, low, , close ] = candles[i];
-    const [ , prevHigh, prevLow, , prevClose ] = candles[i - 1];
+    const [ , , , , prevClose ] = candles[i - 1];
     const tr = Math.max(
       high - low,
       Math.abs(high - prevClose),
