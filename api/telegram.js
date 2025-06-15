@@ -1,5 +1,18 @@
 import { getStats } from '../lib/stats.js';
 
+async function sendMessage(chatId, text) {
+  const url = `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`;
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: 'Markdown'
+    })
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
@@ -25,27 +38,25 @@ export default async function handler(req, res) {
 ▫️ Monthly: ${stats.monthly ?? 0}
 `.trim();
 
-    const url = `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`;
-    const telegramRes = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown'
-      })
-    });
-
+    await sendMessage(chatId, message);
     return res.status(200).json({ success: true });
   }
 
   if (text === '/top_mover') {
-  const moverRes = await fetch(`${process.env.BASE_URL}/api/top_mover`);
-  const data = await moverRes.json();
-  if (!data.success) {
-    await sendMessage(chatId, '❌ Failed to fetch top movers');
-  }
-  return res.status(200).end();
+    try {
+      const moverRes = await fetch(`${process.env.BASE_URL}/api/top_mover`);
+      const data = await moverRes.json();
+
+      if (!data.success) {
+        await sendMessage(chatId, '❌ Failed to fetch top movers');
+      } else {
+        await sendMessage(chatId, data.message || '✅ Top movers fetched successfully.');
+      }
+    } catch (err) {
+      await sendMessage(chatId, `❌ Error: ${err.message}`);
+    }
+
+    return res.status(200).json({ success: true });
   }
 
   // fallback
