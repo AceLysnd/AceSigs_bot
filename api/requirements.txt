@@ -1,4 +1,4 @@
 ccxt
-ta
-requests
 pandas
+requests
+ta
