@@ -4,25 +4,25 @@ import axios from 'axios';
 export default async function handler(req, res) {
   const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
   const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-  const exchange = new ccxt.kucoin();
+  const exchange = new ccxt.kucoinfutures();
 
-const PAIRS = [
-  'BTC/USDT',
-  'ETH/USDT',
-  'BNB/USDT',
-  'SOL/USDT',
-  'XRP/USDT',
-  'ADA/USDT',
-  'DOGE/USDT',
-  'AVAX/USDT',
-  'DOT/USDT',
-  'SHIB/USDT',
-  'MATIC/USDT',
-  'LTC/USDT',
-  'TRX/USDT',
-  'LINK/USDT',
-  'ATOM/USDT'
-];
+  const PAIRS = [
+    'BTC/USDT:USDT',
+    'ETH/USDT:USDT',
+    'BNB/USDT:USDT',
+    'SOL/USDT:USDT',
+    'XRP/USDT:USDT',
+    'ADA/USDT:USDT',
+    'DOGE/USDT:USDT',
+    'AVAX/USDT:USDT',
+    'DOT/USDT:USDT',
+    'SHIB/USDT:USDT',
+    'MATIC/USDT:USDT',
+    'LTC/USDT:USDT',
+    'TRX/USDT:USDT',
+    'LINK/USDT:USDT',
+    'ATOM/USDT:USDT'
+  ];
 
   const signals = [];
 
@@ -32,8 +32,8 @@ const PAIRS = [
         const candles = await exchange.fetchOHLCV(symbol, '1m', undefined, 100);
         const closes = candles.map(c => c[4]);
 
-        const rsi = calculateRSI(closes, 7); // shorter RSI for faster reaction
-        const ema = calculateEMA(closes, 21); // shorter EMA for quicker trend catch
+        const rsi = calculateRSI(closes, 7);
+        const ema = calculateEMA(closes, 21);
         const price = closes[closes.length - 1];
 
         const rsiPrev = rsi[rsi.length - 2];
@@ -42,19 +42,21 @@ const PAIRS = [
 
         let message = null;
 
-        const atr = calculateATR(candles, 10); // faster ATR calculation
+        const atr = calculateATR(candles, 14); // adjusted to 14 and smoother calc
         const atrCurr = atr[atr.length - 1];
-        const minSL = 0.1; // minimum stop loss in case ATR is too small
+        const structureLow = Math.min(...closes.slice(-10));
+        const structureHigh = Math.max(...closes.slice(-10));
+        const minSL = 0.1;
 
         if (rsiPrev < 30 && rsiCurr > 30 && price > emaCurr) {
-            const sl = Math.max(price - atrCurr, price - minSL);
-            const tp = price + (1.5 * (price - sl));
-            message = `🟢 BUY Signal on ${symbol}\nEntry: ${price.toFixed(4)}\nSL: ${sl.toFixed(4)}\nTP: ${tp.toFixed(4)}\nRR: 1.5\nRSI: ${rsiCurr.toFixed(2)}\nEMA(21): ${emaCurr.toFixed(2)}`;
+          const sl = Math.min(price - atrCurr * 1.5, structureLow);
+          const tp = price + 1.5 * (price - sl);
+          message = `🟢 BUY Signal on ${symbol}\nEntry: ${price.toFixed(4)}\nSL: ${sl.toFixed(4)}\nTP: ${tp.toFixed(4)}\nRR: 1.5\nRSI: ${rsiCurr.toFixed(2)}\nEMA(21): ${emaCurr.toFixed(2)}`;
         }
         else if (rsiPrev > 70 && rsiCurr < 70 && price < emaCurr) {
-            const sl = Math.min(price + atrCurr, price + minSL);
-            const tp = price - (1.5 * (sl - price));
-            message = `🔴 SELL Signal on ${symbol}\nEntry: ${price.toFixed(4)}\nSL: ${sl.toFixed(4)}\nTP: ${tp.toFixed(4)}\nRR: 1.5\nRSI: ${rsiCurr.toFixed(2)}\nEMA(21): ${emaCurr.toFixed(2)}`;
+          const sl = Math.max(price + atrCurr * 1.5, structureHigh);
+          const tp = price - 1.5 * (sl - price);
+          message = `🔴 SELL Signal on ${symbol}\nEntry: ${price.toFixed(4)}\nSL: ${sl.toFixed(4)}\nTP: ${tp.toFixed(4)}\nRR: 1.5\nRSI: ${rsiCurr.toFixed(2)}\nEMA(21): ${emaCurr.toFixed(2)}`;
         }
 
         if (message) {
@@ -76,8 +78,6 @@ const PAIRS = [
     return res.status(500).json({ error: error.message });
   }
 }
-
-// Utilities
 
 function calculateRSI(prices, period = 7) {
   const deltas = prices.slice(1).map((v, i) => v - prices[i]);
@@ -109,7 +109,7 @@ function calculateEMA(prices, period = 21) {
   return new Array(period - 1).fill(null).concat(ema);
 }
 
-function calculateATR(candles, period = 10) {
+function calculateATR(candles, period = 14) {
   const trs = [];
   for (let i = 1; i < candles.length; i++) {
     const [ , high, low, , close ] = candles[i];
