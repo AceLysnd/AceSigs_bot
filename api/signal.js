@@ -1,5 +1,6 @@
 import ccxt from 'ccxt';
 import axios from 'axios';
+import { logTradeResult } from '../lib/stats.js';  // adjust path if needed
 
 export default async function handler(req, res) {
   const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -64,6 +65,17 @@ export default async function handler(req, res) {
             chat_id: CHAT_ID,
             text: message
           });
+          
+          const result = {
+            symbol,
+            side: message.includes('BUY') ? 'BUY' : 'SELL',
+            entry: price,
+            result: 'PENDING', // will be updated later to TP or SL
+            date: new Date().toISOString()
+          };
+
+          logTradeResult(result);
+
           signals.push(message);
         }
 
