@@ -1,7 +1,7 @@
-import { getStats } from '../lib/stats.js';
+import { getStats } from '../../lib/stats.js';
 
-export default function handler(req, res) {
-  const range = req.query.range || 'daily'; // daily, weekly, monthly
-  const stats = getStats(range);
-  return res.json(stats);
+export default async function handler(req, res) {
+  const range = req.query.range || 'daily';
+  const stats = await getStats(range);
+  res.json(stats);
 }
