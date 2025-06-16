@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.js';
 import ccxt from 'ccxt';
 
 const exchange = new ccxt.kucoinfutures();
