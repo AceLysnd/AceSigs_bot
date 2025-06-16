@@ -17,8 +17,6 @@ export default async function handler(req, res) {
     'DOGE/USDT:USDT',
     'AVAX/USDT:USDT',
     'DOT/USDT:USDT',
-    'SHIB/USDT:USDT',
-    'MATIC/USDT:USDT',
     'LTC/USDT:USDT',
     'TRX/USDT:USDT',
     'LINK/USDT:USDT',
